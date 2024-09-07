@@ -20,6 +20,7 @@ http.route({
           "svix-timestamp": headerPayload.get("svix-timestamp")!,
         },
       });
+      console.log(result);
 
       switch (result.type) {
         case "user.created":

@@ -58,9 +58,7 @@ export const setUserOnline = internalMutation({
 });
 
 export const setUserOffline = internalMutation({
-  args: {
-    tokenIdentifier: v.string(),
-  },
+  args: { tokenIdentifier: v.string() },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
@@ -85,8 +83,10 @@ export const getUsers = query({
       throw new ConvexError("Unauthorized");
     }
 
+    const token = identity.tokenIdentifier.split("/")[2];
+
     const users = await ctx.db.query("users").collect();
-    return users;
+    return users.filter((user) => user.tokenIdentifier !== token);
   },
 });
 
@@ -94,15 +94,16 @@ export const getMe = query({
   args: {},
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
+
     if (!identity) {
       throw new ConvexError("Unauthorized");
     }
 
+    const token = identity.tokenIdentifier.split("/")[2];
+
     const user = await ctx.db
       .query("users")
-      .withIndex("by_tokenIdentifier", (q) =>
-        q.eq("tokenIdentifier", identity?.tokenIdentifier)
-      )
+      .withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", token))
       .unique();
 
     if (!user) {
@@ -110,5 +111,31 @@ export const getMe = query({
     }
 
     return user;
+  },
+});
+
+export const getGroupMembers = query({
+  args: { conversationId: v.id("conversations") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new ConvexError("Unauthorized");
+    }
+
+    const conversation = await ctx.db
+      .query("conversations")
+      .filter((q) => q.eq(q.field("_id"), args.conversationId))
+      .first();
+    if (!conversation) {
+      throw new ConvexError("Conversation not found");
+    }
+
+    const users = await ctx.db.query("users").collect();
+    const groupMembers = users.filter((user) =>
+      conversation.participants.includes(user._id)
+    );
+
+    return groupMembers;
   },
 });
