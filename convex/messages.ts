@@ -54,6 +54,15 @@ export const sendTextMessage = mutation({
         conversation: args.conversation,
       });
     }
+
+    if (args.content.startsWith("@dall-e")) {
+      //schedule the chat action to run immediately
+
+      await ctx.scheduler.runAfter(0, api.openai.dall_e, {
+        messageBody: args.content,
+        conversation: args.conversation,
+      });
+    }
   },
 });
 
@@ -61,12 +70,13 @@ export const sendChatGPTMessage = mutation({
   args: {
     content: v.string(),
     conversation: v.id("conversations"),
+    messageType: v.union(v.literal("text"), v.literal("image")),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("messages", {
       content: args.content,
       sender: "ChatGPT",
-      messageType: "text",
+      messageType: args.messageType,
       conversation: args.conversation,
     });
   },
@@ -93,15 +103,6 @@ export const getMessages = query({
 
     const messagesWithSender = await Promise.all(
       messages.map(async (message) => {
-        if (message.sender === "ChatGPT") {
-          return {
-            ...message,
-            sender: {
-              name: "ChatGPT",
-              image: "/gpt.png",
-            },
-          };
-        }
         if (message.sender === "ChatGPT") {
           const image =
             message.messageType === "text" ? "/gpt.png" : "dall-e.png";
