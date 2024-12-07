@@ -69,7 +69,7 @@ const ChatAvatarActions = ({ message, me }: ChatAvatarActionsProps) => {
       className=" text-[11px] flex gap-4 justify-between font-bold cursor-pointer group "
       onClick={handleCreateConversations}
     >
-      {message.sender.name}
+      {isGroup && message.sender.name}
       {!isMember && !fromAI && isGroup && (
         <Ban size={16} className=" text-red-500 " />
       )}
